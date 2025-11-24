@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat do Egitão - Web</title>
+    <style>
+        /* --- CONFIGURAÇÕES GERAIS --- */
+        :root {
+            --header-bg: #f0f2f5;
+            --sent-bg: #d9fdd3;
+            --received-bg: #ffffff;
+            --primary-green: #00a884;
+            --calc-btn-size: 40px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        
+        body {
+            background-color: #d1d7db;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh;
+            background-image: linear-gradient(to bottom, #00a884 127px, #d1d7db 127px);
+        }
+
+        /* --- CONTAINER PRINCIPAL --- */
+        .app-container {
+            width: 100%; max-width: 1400px; height: 95vh;
+            background-color: #efeae2;
+            box-shadow: 0 17px 50px 0 rgba(11,20,26,.19);
+            display: flex; overflow: hidden;
+            border-radius: 0;
+        }
+        @media (min-width: 1441px) { .app-container { height: calc(100vh - 38px); border-radius: 4px; } }
+
+        /* --- SIDEBAR (ESQUERDA) --- */
+        .sidebar { 
+            width: 30%; min-width: 300px; max-width: 450px; 
+            background-color: #fff; display: flex; flex-direction: column; 
+            border-right: 1px solid #d1d7db; 
+        }
+
+        .header-panel {
+            height: 60px; background-color: var(--header-bg); padding: 10px 16px;
+            display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #d1d7db;
+        }
+        .user-avatar { width: 40px; height: 40px; border-radius: 50%; background-image: url('https://ui-avatars.com/api/?name=Eu&background=ddd&color=fff'); background-size: cover; }
+        
+        .header-icons { display: flex; gap: 20px; color: #54656f; }
+        .icon-btn { cursor: pointer; background: none; border: none; color: inherit; display: flex; align-items: center; }
+        .icon-btn svg { width: 24px; height: 24px; }
+
+        .search-container { background-color: #fff; padding: 10px; border-bottom: 1px solid #f0f2f5; }
+        .search-bar { background-color: #f0f2f5; border-radius: 8px; padding: 7px 15px; display: flex; align-items: center; gap: 10px; }
+        .search-bar input { border: none; background: transparent; outline: none; width: 100%; font-size: 14px; }
+
+        .contact-list { overflow-y: auto; flex: 1; background-color: #fff; }
+        .contact { display: flex; align-items: center; padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #f0f2f5; }
+        .contact.active { background-color: #f0f2f5; }
+        .contact img { width: 49px; height: 49px; border-radius: 50%; margin-right: 15px; }
+        .contact-info { flex: 1; }
+        .contact-row-top { display: flex; justify-content: space-between; margin-bottom: 3px; }
+        .contact-name { font-size: 17px; color: #111b21; }
+        .contact-time { font-size: 12px; color: #667781; }
+        .contact-msg { font-size: 14px; color: #667781; display: flex; align-items: center; gap: 3px; }
+
+        /* --- ÁREA DO CHAT (DIREITA) --- */
+        .chat-area { flex: 1; display: flex; flex-direction: column; position: relative; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: #efeae2; }
+
+        .chat-header {
+            height: 60px; background-color: var(--header-bg); padding: 0 16px;
+            display: flex; align-items: center; border-bottom: 1px solid #d1d7db; z-index: 10;
+        }
+        .chat-header img { width: 40px; height: 40px; border-radius: 50%; margin-right: 15px; cursor: pointer; }
+        .chat-info { flex: 1; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+        
+        .rainbow-text {
+            font-size: 17px; font-weight: 800;
+            background: linear-gradient(to right, #ff0000, #ff8c00, #e8e800, #00d415, #0099ff, #6a00ff, #ff00c8);
+            background-size: 200% auto; -webkit-background-clip: text; background-clip: text; color: transparent;
+            animation: shine 3s linear infinite; text-transform: uppercase; white-space: nowrap;
+        }
+        @keyframes shine { to { background-position: 200% center; } }
+        
+        .chat-status { font-size: 13px; color: #00a884; font-weight: 500; display: flex; align-items: center; gap: 5px; }
+        .chat-status::before { content: ''; display: block; width: 8px; height: 8px; background-color: #00a884; border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        .messages-container { flex: 1; padding: 20px 40px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+        .message-row { display: flex; width: 100%; margin-bottom: 8px; }
+        .message-row.sent { justify-content: flex-end; }
+        .message-row.received { justify-content: flex-start; }
+        .bubble { max-width: 65%; padding: 8px 12px; border-radius: 7.5px; position: relative; font-size: 14.2px; line-height: 19px; color: #111b21; box-shadow: 0 1px 0.5px rgba(11,20,26,.13); }
+        .bubble.sent { background-color: var(--sent-bg); border-top-right-radius: 0; }
+        .bubble.received { background-color: var(--received-bg); border-top-left-radius: 0; }
+        .bubble.sent::before { content: ""; position: absolute; top: 0; right: -8px; width: 8px; height: 13px; background: linear-gradient(to bottom right, var(--sent-bg) 50%, transparent 50%); }
+        .bubble.received::before { content: ""; position: absolute; top: 0; left: -8px; width: 8px; height: 13px; background: linear-gradient(to bottom left, var(--received-bg) 50%, transparent 50%); }
+        .msg-meta { display: flex; justify-content: flex-end; align-items: center; gap: 4px; margin-top: -3px; margin-left: 10px; float: right; font-size: 11px; color: #667781; }
+        .read-icon { width: 16px; height: 11px; display: inline-block; }
+        .read-icon svg { width: 100%; height: 100%; fill: #53bdeb; }
+
+        /* --- BARRA DE CÁLCULO ESTILO IMAGEM --- */
+        .calc-toolbar {
+            background-color: transparent; 
+            padding: 10px 0 15px 0;
+            display: flex; justify-content: center; align-items: center;
+            gap: 12px; z-index: 5;
+            overflow-x: auto; scrollbar-width: none;
+        }
+        .calc-toolbar::-webkit-scrollbar { display: none; }
+        
+        .calc-btn {
+            background-color: #fff; 
+            width: var(--calc-btn-size); height: var(--calc-btn-size); 
+            border-radius: 50%;
+            border: 1px solid #ccc; /* BORDA IGUAL A IMAGEM */
+            font-size: 22px; font-weight: 600; color: var(--primary-green); /* COR VERDE */
+            cursor: pointer; box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .calc-btn:hover { background-color: #f8f9fa; transform: translateY(-2px); border-color: #bbb; }
+        .calc-btn:active { transform: translateY(0); }
+
+        /* --- FOOTER / INPUT AREA --- */
+        .footer-chat {
+            background-color: var(--header-bg); padding: 10px 16px;
+            display: flex; align-items: center; gap: 12px; z-index: 20; min-height: 62px;
+        }
+
+        .icon-footer { 
+            color: #54656f; cursor: pointer; padding: 4px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .icon-footer:hover { color: #111b21; }
+        .icon-footer svg { width: 26px; height: 26px; }
+
+        .input-wrapper {
+            flex: 1; background-color: #fff; border-radius: 8px; padding: 12px 15px; 
+            display: flex; align-items: center; border: 1px solid #fff;
+        }
+        .chat-input {
+            width: 100%; border: none; outline: none; font-size: 16px; background: transparent; color: #111b21;
+        }
+        .chat-input::placeholder { color: #667781; }
+
+        .btn-send-mic {
+            width: 40px; height: 40px; 
+            display: flex; align-items: center; justify-content: center; 
+            border: none; cursor: pointer; background: transparent; color: #54656f;
+        }
+        .btn-send-mic.active { color: var(--primary-green); }
+        .btn-send-mic svg { width: 26px; height: 26px; }
+
+        /* Emoji Panel */
+        .emoji-panel { position: absolute; bottom: 85px; left: 20px; width: 320px; background-color: var(--header-bg); border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); border: 1px solid #ccc; padding: 10px; display: none; grid-template-columns: repeat(8, 1fr); gap: 5px; max-height: 250px; overflow-y: auto; z-index: 100; }
+        .emoji-panel.active { display: grid; }
+        .emoji-item { font-size: 22px; cursor: pointer; text-align: center; padding: 4px; border-radius: 4px; }
+        .emoji-item:hover { background-color: #d1d7db; }
+
+        @media (max-width: 900px) { .sidebar { display: none; } .app-container { height: 100vh; width: 100%; border-radius: 0; } }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <div class="header-panel">
+                <div class="user-avatar"></div>
+                <div class="header-icons">
+                    <button class="icon-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.001 2.002c-5.522 0-9.999 4.477-9.999 9.999 0 5.523 4.477 10 9.999 10 5.523 0 10-4.477 10-10 0-5.522-4.477-9.999-10-9.999zm0 18.272c-4.561 0-8.273-3.712-8.273-8.273 0-4.56 3.712-8.272 8.273-8.272 4.561 0 8.273 3.712 8.273 8.272 0 4.561-3.712 8.273-8.273 8.273zm4.949-8.799a.862.862 0 0 0-.251-.61l-3.95-3.95a.864.864 0 0 0-1.222 1.222l2.339 2.339h-6.23a.864.864 0 0 0 0 1.728h6.23l-2.339 2.338a.861.861 0 0 0 0 1.222.866.866 0 0 0 1.222 0l3.95-3.949a.862.862 0 0 0 .251-.611z"></path></svg></button>
+                    <button class="icon-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.005 3.175H4.674C3.642 3.175 3 3.789 3 4.821V21.02l3.544-3.514h12.461c1.033 0 2.064-1.06 2.064-2.093V4.821c-.001-1.032-1.032-1.646-2.064-1.646zm-4.989 9.869H6.666a.664.664 0 0 1 0-1.328h7.35a.664.664 0 0 1 0 1.328zm3.33-3.328H6.666a.664.664 0 0 1 0-1.328h10.68a.664.664 0 0 1 0 1.328z"></path></svg></button>
+                    <button class="icon-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 7a2 2 0 1 0-.001-4.001A2 2 0 0 0 12 7zm0 2a2 2 0 1 0-.001 3.999A2 2 0 0 0 12 9zm0 6a2 2 0 1 0-.001 3.999A2 2 0 0 0 12 15z"></path></svg></button>
+                </div>
+            </div>
+            
+            <div class="search-container">
+                <div class="search-bar">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="#54656f"><path d="M15.009 13.805h-.636l-.22-.219a5.184 5.184 0 0 0 1.256-3.386 5.207 5.207 0 1 0-5.207 5.208 5.183 5.183 0 0 0 3.385-1.255l.221.22v.635l4.004 3.999 1.194-1.195-3.997-4.007zm-4.808 0a3.605 3.605 0 1 1 0-7.21 3.605 3.605 0 0 1 0 7.21z"></path></svg>
+                    <input type="text" placeholder="Pesquisar ou começar uma nova conversa">
+                </div>
+            </div>
+
+            <div class="contact-list">
+                <div class="contact active">
+                    <img src="https://ui-avatars.com/api/?name=Egitão&background=000&color=fff&size=128" alt="Egitão">
+                    <div class="contact-info">
+                        <div class="contact-row-top">
+                            <h4 class="contact-name">CHAT DO EGITÃO</h4>
+                            <span class="contact-time">10:00</span>
+                        </div>
+                        <div class="contact-msg">Online</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AREA DO CHAT -->
+        <div class="chat-area">
+            <div class="chat-header">
+                <img src="https://ui-avatars.com/api/?name=Egitão&background=000&color=fff&size=128" alt="Avatar">
+                <div class="chat-info">
+                    <div class="rainbow-text">CHAT DE CALCULOS DO EGITÃO</div>
+                    <div class="chat-status" id="status">Online</div>
+                </div>
+            </div>
+
+            <div class="messages-container" id="messageList">
+                <div class="message-row received">
+                    <div class="bubble received">
+                        Fala galera! Bem-vindos ao <strong>CHAT DO EGITÃO</strong>. 🤖😎<br>
+                        Manda as contas ou usa os botões lá embaixo! 👇
+                        <div class="msg-meta">10:00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BARRA DE FERRAMENTAS -->
+            <div class="calc-toolbar">
+                <button class="calc-btn" onclick="insertSymbol('+')">+</button>
+                <button class="calc-btn" onclick="insertSymbol('-')">-</button>
+                <button class="calc-btn" onclick="insertSymbol('×')">×</button>
+                <button class="calc-btn" onclick="insertSymbol('÷')">÷</button>
+                <button class="calc-btn" onclick="insertSymbol('%')">%</button>
+                <button class="calc-btn" onclick="insertSymbol('✓')">✓</button>
+                <button class="calc-btn" onclick="insertSymbol('π')">π</button>
+            </div>
+
+            <div class="emoji-panel" id="emojiPanel"></div>
+
+            <div class="footer-chat">
+                <!-- Emoji Button -->
+                <div class="icon-footer" onclick="toggleEmojiPanel()" title="Emojis">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.153 11.603c.795 0 1.439-.879 1.439-1.962s-.644-1.962-1.439-1.962-1.439.879-1.439 1.962.644 1.962 1.439 1.962zm-3.204 1.362c-.026-.307-.131 5.218 6.063 5.551 6.066-.25 6.066-5.551 6.066-5.551-6.078 1.416-12.129 0-12.129 0zm11.363 1.108s-.669 1.959-5.051 1.959c-3.505 0-5.388-1.164-5.607-1.959 0 0 5.912 1.055 10.658 0zM11.804 1.011C5.609 1.011.978 6.033.978 12.228s4.826 10.761 11.021 10.761S23.02 18.423 23.02 12.228c.001-6.195-5.021-11.217-11.216-11.217zM12 21.354c-5.273 0-9.381-3.886-9.381-9.159s3.942-9.548 9.215-9.548 9.548 4.275 9.548 9.548c-.001 5.272-4.109 9.159-9.382 9.159zm3.108-9.751c.795 0 1.439-.879 1.439-1.962s-.644-1.962-1.439-1.962-1.439.879-1.439 1.962.644 1.962 1.439 1.962z"></path></svg>
+                </div>
+                
+                <!-- SALINHA DOS ESCRIPTS (CLIPE DE PAPEL) -->
+                <div class="icon-footer" onclick="abrirSalinha()" title="Salinha dos Escripts">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1.816 15.556v.002c0 1.502.584 2.912 1.646 3.972s2.472 1.647 3.974 1.647a5.58 5.58 0 0 0 3.972-1.645l9.547-9.548c.769-.768 1.147-1.767 1.058-2.817-.079-.968-.548-1.927-1.319-2.698-1.594-1.592-4.068-1.711-5.517-.262l-7.916 7.915c-.881.881-.792 2.25.214 3.261.959.958 2.423 1.053 3.263.215l5.511-5.512c.28-.28.267-.722.053-.936l-.244-.244c-.191-.191-.567-.349-.957.04l-5.506 5.506c-.18.18-.635.127-.976-.214-.098-.097-.576-.613-.213-.973l7.915-7.917c.818-.817 2.267-.699 3.23.262.5.501.802 1.1.849 1.685.051.573-.156 1.111-.589 1.543l-9.547 9.549a3.97 3.97 0 0 1-2.829 1.171 3.975 3.975 0 0 1-2.83-1.173 3.973 3.973 0 0 1-1.172-2.828c0-1.071.415-2.076 1.172-2.83l7.209-7.211c.157-.157.264-.579.028-.814L11.5 4.36a.572.572 0 0 0-.834.018l-7.205 7.207a5.577 5.577 0 0 0-1.645 3.971z"></path></svg>
+                </div>
+
+                <div class="input-wrapper">
+                    <input type="text" id="messageInput" class="chat-input" placeholder="Digite uma mensagem" autocomplete="off">
+                </div>
+
+                <button class="btn-send-mic" id="sendBtn" onclick="sendMessage()">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1.101 21.757 23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"></path></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const messageInput = document.getElementById('messageInput');
+        const messageList = document.getElementById('messageList');
+        const statusSpan = document.getElementById('status');
+        const emojiPanel = document.getElementById('emojiPanel');
+        const sendBtn = document.getElementById('sendBtn');
+
+        messageInput.focus();
+
+        /* --- FUNÇÃO PARA ABRIR A SALINHA DOS ESCRIPTS --- */
+        function abrirSalinha() {
+            window.open('https://egitonub-blip.github.io/V999-NOVA-VERS-O-SALA-DOS-ESCRIPTS-/', '_blank');
+        }
+
+        messageInput.addEventListener('input', () => {
+            if(messageInput.value.trim() !== "") {
+                sendBtn.classList.add('active');
+            } else {
+                sendBtn.classList.remove('active');
+            }
+        });
+
+        const emojiList = [
+            "😀","😃","😄","😁","😆","😅","😂","🤣","🥲","🥹",
+            "☺️","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘",
+            "😗","😙","😚","😋","😛","😝","😜","🤪","🤨","🧐",
+            "🤓","😎","🥸","🤩","🥳","😏","😒","😞","😔","😟",
+            "😕","🙁","☹️","😣","😖","😫","😩","🥺","😢","😭",
+            "👍","👎","👏","🤝","🫶","❤️","🧡","💛","💚","💙",
+            "💜","🖤","🤍","💯","💢","💥","💫","💦","💨","🕳️"
+        ];
+
+        emojiList.forEach(emoji => {
+            const span = document.createElement('div');
+            span.textContent = emoji;
+            span.className = 'emoji-item';
+            span.onclick = () => { insertSymbol(emoji); };
+            emojiPanel.appendChild(span);
+        });
+
+        function toggleEmojiPanel() { emojiPanel.classList.toggle('active'); }
+        
+        function insertSymbol(symbol) { 
+            messageInput.value += symbol; 
+            messageInput.focus();
+            sendBtn.classList.add('active');
+        }
+
+        messageInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') { 
+                sendMessage(); 
+                emojiPanel.classList.remove('active'); 
+            }
+        });
+
+        function sendMessage() {
+            const text = messageInput.value.trim();
+            if (text === "") return;
+
+            addMessage(text, 'sent');
+            messageInput.value = '';
+            sendBtn.classList.remove('active');
+            processBotResponse(text);
+        }
+
+        const readReceipt = `<span class="read-icon"><svg viewBox="0 0 16 15"><path d="M15.01 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.666 9.879a.32.32 0 0 1-.484.033l-.358-.325a.319.319 0 0 0-.484.032l-.378.483a.418.418 0 0 0 .036.541l1.32 1.266c.143.14.361.125.484-.033l6.272-8.048a.366.366 0 0 0-.064-.512zm-4.1 0l-.478-.372a.365.365 0 0 0-.51.063L4.566 9.879a.32.32 0 0 1-.484.033L1.891 7.769a.366.366 0 0 0-.515.006l-.423.433a.364.364 0 0 0 .006.514l3.258 3.185c.143.14.361.125.484-.033l6.272-8.048a.365.365 0 0 0-.063-.51z"></path></svg></span>`;
+
+        function addMessage(text, type) {
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            const rowDiv = document.createElement('div');
+            rowDiv.classList.add('message-row', type);
+            
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.classList.add('bubble', type);
+            
+            const metaHtml = type === 'sent' 
+                ? `${time} ${readReceipt}` 
+                : `${time}`;
+
+            bubbleDiv.innerHTML = `${text}<div class="msg-meta">${metaHtml}</div>`;
+            
+            rowDiv.appendChild(bubbleDiv);
+            messageList.appendChild(rowDiv);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() { messageList.scrollTop = messageList.scrollHeight; }
+
+        function processBotResponse(userText) {
+            statusSpan.innerText = "digitando...";
+            setTimeout(() => {
+                const response = getSmartReply(userText);
+                addMessage(response, 'received');
+                statusSpan.innerText = "Online";
+            }, 1000 + Math.random() * 500);
+        }
+
+        function getSmartReply(text) {
+            let expression = text;
+            expression = expression.replace(/×/g, '*').replace(/x/gi, '*');
+            expression = expression.replace(/÷/g, '/');
+            expression = expression.replace(/,/g, '.');
+            expression = expression.replace(/(\d+(\.\d+)?)%/g, '($1/100)');
+            expression = expression.replace(/(\d)\s*π/g, '$1*Math.PI');
+            expression = expression.replace(/π/g, 'Math.PI');
+            
+            // Aceita tanto o √ quanto o ✓ para a raiz, para garantir
+            expression = expression.replace(/[√✓]\s*(\d+(\.\d+)?)/g, 'Math.sqrt($1)');
+
+            try {
+                if (!/\d/.test(expression)) throw new Error("Sem números");
+                const cleanExpr = expression.replace(/[^0-9\.\+\-\*\/\(\)Math\.PIsqrt\s]/g, '');
+                const result = eval(cleanExpr);
+                if (!isFinite(result) || isNaN(result)) throw new Error("Inválido");
+                
+                let finalResult = result.toString().replace('.', ',');
+                if (result % 1 !== 0) { finalResult = result.toFixed(4).replace('.', ',').replace(/,0+$/, ''); }
+                
+                return `Resultado: <b>${finalResult}</b>`;
+            } catch (e) { return getChatResponse(text); }
+        }
+
+        function getChatResponse(text) {
+            const t = text.toLowerCase();
+            if (t.includes("😂") || t.includes("kkk")) return "Hahaha! 😂";
+            if (t.includes("oi") || t.includes("olá")) return "Fala chefia! Manda a conta aí. 📐";
+            return "Manda uma conta aí pro Egitão resolver! (ex: 50 + 50)";
+        }
+    </script>
+</body>
+</html>
